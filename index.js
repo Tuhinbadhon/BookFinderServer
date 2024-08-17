@@ -45,16 +45,21 @@ async function run() {
           },
           category ? { category: category } : {},
           brand ? { brand: brand } : {},
-          priceRange
-            ? {
-                price: {
-                  $gte: parseFloat(priceRange.split("-")[0]),
-                  $lte: parseFloat(priceRange.split("-")[1]),
-                },
-              }
-            : {},
         ],
       };
+
+      // Handle price filtering
+      if (priceRange) {
+        const [minPrice, maxPrice] = priceRange.split("-").map(Number);
+        if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+          query.$and.push({
+            price: {
+              $gte: minPrice,
+              $lte: maxPrice,
+            },
+          });
+        }
+      }
 
       try {
         const totalProducts = await productsCollection.countDocuments(query);
