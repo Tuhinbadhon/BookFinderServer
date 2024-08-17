@@ -4,23 +4,13 @@ const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
-// middleware
+// Middleware
 app.use(cors());
-/*app.use(
-  cors({
-    origin: ["http://localhost:5173", "https://storksdel.netlify.app"],
-    credentials: true,
-  })
-); */
 app.use(express.json());
 
-// mongodb cnctn
-
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cauvj2c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// MongoDB connection
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cauvj2c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -31,28 +21,42 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-
     const productsCollection = client.db("FHdb").collection("products");
 
-    //getting data from mongodb
+    // Getting data from MongoDB
     app.get("/products", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 9;
       const sortField = req.query.sortField || "creationDate";
       const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
       const search = req.query.search || "";
+      const category = req.query.category || "";
+      const brand = req.query.brand || "";
+      const priceRange = req.query.priceRange || "";
 
       const query = {
-        $or: [
-          { productName: { $regex: search, $options: "i" } },
-          { brand: { $regex: search, $options: "i" } },
+        $and: [
+          {
+            $or: [
+              { productName: { $regex: search, $options: "i" } },
+              { brand: { $regex: search, $options: "i" } },
+            ],
+          },
+          category ? { category: category } : {},
+          brand ? { brand: brand } : {},
+          priceRange
+            ? {
+                price: {
+                  $gte: parseFloat(priceRange.split("-")[0]),
+                  $lte: parseFloat(priceRange.split("-")[1]),
+                },
+              }
+            : {},
         ],
       };
 
       try {
-        const productsCollection = client.db("FHdb").collection("products");
         const totalProducts = await productsCollection.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
@@ -80,15 +84,15 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    //   await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("style room server is running ");
+  res.send("style room server is running");
 });
 
 app.listen(port, () => {
-  console.log("style room server on port:  ", port);
+  console.log("style room server on port: ", port);
 });
