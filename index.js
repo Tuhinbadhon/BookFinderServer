@@ -42,7 +42,12 @@ async function run() {
 
       const query = {
         $and: [
-          {},
+          {
+            $or: [
+              { productName: { $regex: search, $options: "i" } },
+              { brand: { $regex: search, $options: "i" } },
+            ],
+          },
           category ? { category: category } : {},
           brand ? { brand: brand } : {},
         ],
